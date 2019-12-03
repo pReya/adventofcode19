@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"path/filepath"
-	"reflect"
+	"strconv"
 	"strings"
+
+	geo "github.com/paulmach/go.geo"
 )
 
 func check(e error) {
@@ -19,24 +22,55 @@ func part1() {
 	check(pathErr)
 	dat, datErr := ioutil.ReadFile(absPath)
 	check(datErr)
-	lines := strings.Split(string(dat), "\n")
-	fmt.Println("Line 1: ", lines[0])
-	move("L319")
-}
 
-func move(cmd string) {
-	fmt.Println(reflect.TypeOf(cmd[0]))
-	switch string(cmd[0]) {
-	case "L":
-		fmt.Println("Left")
-	case "R":
-		fmt.Println("Right")
-	case "U":
-		fmt.Println("Up")
-	case "D":
-		fmt.Println("Down")
+	paths := make([]*geo.Path, 0)
+
+	wires := strings.Split(string(dat), "\n")
+	for _, wire := range wires {
+		instructions := strings.Split(string(wire), ",")
+		paths = append(paths, createCoordinates(instructions))
 	}
 
+	intersectionPoints, _ := paths[0].IntersectionPath(paths[1])
+	fmt.Println("Intersection points", intersectionPoints)
+	shortestDistance := 9999999.99
+	var shortestDistancePoint *geo.Point
+
+	for _, intersectionPoint := range intersectionPoints {
+		distance := math.Abs(intersectionPoint[0]) + math.Abs(intersectionPoint[1])
+		if distance < shortestDistance {
+			shortestDistance = distance
+			shortestDistancePoint = intersectionPoint
+		}
+	}
+	fmt.Println("Intersection", shortestDistancePoint, "at distance", shortestDistance)
+}
+
+func createCoordinates(commands []string) *geo.Path {
+
+	path := geo.NewPath()
+	x := 0
+	y := 0
+
+	for _, command := range commands {
+		direction := string(command[0])
+		steps, err := strconv.Atoi(string(command[1:]))
+		check(err)
+
+		switch direction {
+		case "L":
+			x = x - steps
+		case "R":
+			x = x + steps
+		case "U":
+			y = y + steps
+		case "D":
+			y = y - steps
+		}
+
+		path.Push(geo.NewPoint(float64(x), float64(y)))
+	}
+	return path
 }
 
 func main() {
